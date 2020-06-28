@@ -42,11 +42,88 @@
     return Constructor;
   }
 
+  var oldArrayProtoMethods = Array.prototype;
+  var arrayMethods = Object.create(oldArrayProtoMethods);
+  var methods = ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'];
+  methods.forEach(function (method) {
+    arrayMethods[method] = function () {
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      var result = oldArrayProtoMethods[method].apply(this, args);
+      var ob = this.__ob__;
+      var inserted = null;
+
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break;
+
+        case 'splice':
+          inserted = args.slice(2);
+          break;
+      }
+
+      if (inserted) {
+        ob.observeArray(inserted);
+      }
+
+      return result;
+    };
+  });
+
+  var emptyObject = Object.freeze({});
+  function makeMap(str, expectsLowerCase) {
+    var map = Object.create(null);
+    var list = str.split(',');
+
+    for (var i = 0; i < list.length; i++) {
+      map[list[i]] = true;
+    }
+
+    return expectsLowerCase ? function (val) {
+      return map[val.toLowerCase()];
+    } : function (val) {
+      return map[val];
+    };
+  }
+  /**
+   * Check if a tag is a built-in tag.
+   */
+
+  var isBuiltInTag = makeMap('slot,component', true);
+  /**
+   * Check if an attribute is a reserved attribute.
+   */
+
+  var isReservedAttribute = makeMap('key,ref,slot,slot-scope,is');
+  /**
+   * Check whether an object has the property.
+   */
+
+  var hasOwnProperty = Object.prototype.hasOwnProperty;
+  function hasOwn(obj, key) {
+    return hasOwnProperty.call(obj, key);
+  }
+
   var Observer = /*#__PURE__*/function () {
     function Observer(value) {
       _classCallCheck(this, Observer);
 
-      this.walk(value);
+      Object.defineProperty(value, '__ob__', {
+        enumerable: false,
+        configurable: false,
+        value: this
+      });
+
+      if (Array.isArray(value)) {
+        value.__proto__ = arrayMethods;
+        this.observeArray(value);
+      } else {
+        this.walk(value);
+      }
     }
 
     _createClass(Observer, [{
@@ -58,6 +135,13 @@
           var key = keys[i];
           var value = data[key];
           defineReactive(data, key, value);
+        }
+      }
+    }, {
+      key: "observeArray",
+      value: function observeArray(value) {
+        for (var i = 0, len = value.length; i < len; i++) {
+          observe(value[i]);
         }
       }
     }]);
@@ -82,9 +166,14 @@
   function observe(data) {
     if (_typeof(data) !== 'object' && data != null) {
       return;
-    }
+    } // 如果被监听过就返回监听过的对象
 
-    return new Observer(data);
+
+    if (hasOwn(data, '__ob__') && data.__ob__ instanceof Observer) {
+      return data.__ob__;
+    } else {
+      return new Observer(data);
+    }
   }
 
   function initState(vm) {
@@ -103,10 +192,27 @@
     if (opts.watch) ;
   }
 
+  function proxy(vm, source, key) {
+    Object.defineProperty(vm, key, {
+      get: function get() {
+        return vm[source][key];
+      },
+      set: function set(newValue) {
+        return vm[source][key] = newValue;
+      }
+    });
+  }
+
   function initData(vm) {
     var data = vm.$options.data;
-    data = vm._data = typeof data === 'function' ? data.call(vm, vm) : data || {}; // let keys = Object.keys(data);
-    // let i = keys.length;
+    data = vm._data = typeof data === 'function' ? data.call(vm, vm) : data || {}; // 数据代理
+
+    var keys = Object.keys(data);
+    var i = keys.length;
+
+    while (i--) {
+      proxy(vm, '_data', keys[i]);
+    }
 
     observe(data);
   }
