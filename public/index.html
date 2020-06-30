@@ -6,26 +6,25 @@
   <title>vue</title>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div>
+      <p style="color: red;" id="cc">{{  name  }}     
+        {{  age  }}
+      <span>{{age}}</span></p>
+    </div>
+  </div>
   <script src="../dist/vue.js"></script>
   <script>
     var vm = new Vue({
+      el: '#root',
       data() {
         return {
           name: 'abc',
-          arr: [
-            {
-              a: '123',
-              arr: [
-                {
-                  b: 'c'
-                }
-              ]
-            }
-          ]
+          age: '123'
         }
       }
     })
+    vm.$mount('#root')
   </script>
 </body>
 </html>
