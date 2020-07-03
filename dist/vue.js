@@ -322,9 +322,8 @@
   }
 
   function chars(text) {
-    text = text.replace(/\s/g, '');
-
-    if (text) {
+    // text = text.replace(/\s/g, '')
+    if (text && text.replace(/\s/g, '')) {
       currentParent.children.push({
         type: TEXT_TYPE,
         text: text
@@ -487,6 +486,50 @@
     return renderFn;
   }
 
+  var id = 0;
+
+  var Watcher = /*#__PURE__*/function () {
+    function Watcher(vm, exprOrFn, cb, options) {
+      _classCallCheck(this, Watcher);
+
+      this.vm = vm;
+      this.exprOrFn = exprOrFn;
+
+      if (typeof exprOrFn === 'function') {
+        this.getter = exprOrFn;
+      }
+
+      this.cb = cb;
+      this.options = options;
+      this.id = id++;
+      this.getter();
+    }
+
+    _createClass(Watcher, [{
+      key: "get",
+      value: function get() {
+        this.getter();
+      }
+    }]);
+
+    return Watcher;
+  }();
+
+  function lifecycleMixin(Vue) {
+    Vue.prototype._update = function (vnode) {
+      console.log(vnode);
+    };
+  }
+  function mountComponent(vm, el) {
+    vm.$el = el;
+
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    };
+
+    new Watcher(vm, updateComponent, function () {}, true);
+  }
+
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
       var vm = this;
@@ -509,6 +552,60 @@
         var render = compileToFunctions(template);
         options.render = render;
       }
+
+      mountComponent(vm, el);
+    };
+  }
+
+  function createTextNode(text) {
+    return vnode(undefined, undefined, undefined, undefined, text);
+  }
+  function createElement(tag) {
+    var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var key = data.key;
+
+    if (key) {
+      delete data.key;
+    }
+
+    for (var _len = arguments.length, children = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+      children[_key - 2] = arguments[_key];
+    }
+
+    return vnode(tag, data, key, children);
+  }
+
+  function vnode(tag, data, key, children, text) {
+    return {
+      tag: tag,
+      data: data,
+      key: key,
+      children: children,
+      text: text
+    };
+  }
+
+  function renderMixin(Vue) {
+    // 创建文本
+    Vue.prototype._v = function (text) {
+      return createTextNode(text);
+    }; // 创建元素
+
+
+    Vue.prototype._c = function () {
+      return createElement.apply(void 0, arguments);
+    }; // 拿到数据
+
+
+    Vue.prototype._s = function (val) {
+      return val == null ? '' : _typeof(val) === 'object' ? JSON.stringify(val) : val;
+    };
+
+    Vue.prototype._render = function () {
+      var vm = this;
+      var render = this.$options.render;
+      var vnode = render.call(vm);
+      return vnode;
     };
   }
 
@@ -517,6 +614,8 @@
   }
 
   initMixin(Vue);
+  lifecycleMixin(Vue);
+  renderMixin(Vue);
 
   return Vue;
 

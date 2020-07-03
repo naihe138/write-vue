@@ -36,8 +36,8 @@ function end(tagName) {
   }
 }
 function chars(text) {
-  text = text.replace(/\s/g, '')
-  if (text) {
+  // text = text.replace(/\s/g, '')
+  if (text && text.replace(/\s/g, '')) {
     currentParent.children.push({
       type: TEXT_TYPE,
       text
