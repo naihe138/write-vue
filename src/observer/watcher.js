@@ -13,13 +13,13 @@ class Watcher{
     this.id = id++
     this.deps = []
     this.depsId = new Set()
-    this.getter()
+    this.get()
   }
   addDep(dep) {
     let id = dep.id
     if (!this.depsId.has(id)) {
       this.depsId.add(id)
-      this.depsId.push(dep)
+      this.deps.push(dep)
       dep.addSub(this);
     }
   }

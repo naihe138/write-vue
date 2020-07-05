@@ -221,7 +221,7 @@
       _classCallCheck(this, Dep);
 
       this.id = id++;
-      this.sub = [];
+      this.subs = [];
     }
 
     _createClass(Dep, [{
@@ -234,7 +234,7 @@
     }, {
       key: "notify",
       value: function notify() {
-        this.sub.forEach(function (watcher) {
+        this.subs.forEach(function (watcher) {
           return watcher.update();
         });
       }
@@ -249,9 +249,9 @@
   }();
 
   var stack = [];
-  function pushTarget(watch) {
-    Dep.target = watch;
-    stack.push(watch);
+  function pushTarget(watcher) {
+    Dep.target = watcher;
+    stack.push(watcher);
   }
   function popTarget() {
     stack.pop();
@@ -626,7 +626,7 @@
       this.id = id$1++;
       this.deps = [];
       this.depsId = new Set();
-      this.getter();
+      this.get();
     }
 
     _createClass(Watcher, [{
@@ -636,7 +636,7 @@
 
         if (!this.depsId.has(id)) {
           this.depsId.add(id);
-          this.depsId.push(dep);
+          this.deps.push(dep);
           dep.addSub(this);
         }
       }

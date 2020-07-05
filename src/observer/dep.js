@@ -2,7 +2,7 @@ let id = 0
 class Dep{
   constructor() {
     this.id = id++
-    this.sub = []
+    this.subs = []
   }
   depend() {
     if (Dep.target) {
@@ -10,7 +10,7 @@ class Dep{
     }
   }
   notify() {
-    this.sub.forEach(watcher => watcher.update())
+    this.subs.forEach(watcher => watcher.update())
   }
   addSub(watcher) {
     this.subs.push(watcher)
@@ -19,9 +19,9 @@ class Dep{
 
 let stack = []
 
-export function pushTarget(watch) {
-  Dep.target = watch
-  stack.push(watch)
+export function pushTarget(watcher) {
+  Dep.target = watcher
+  stack.push(watcher)
 }
 
 export function popTarget() {
