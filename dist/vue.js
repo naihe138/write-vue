@@ -175,6 +175,7 @@
         ob.observeArray(inserted);
       }
 
+      ob.dep.notify();
       return result;
     };
   });
@@ -213,6 +214,50 @@
     return hasOwnProperty.call(obj, key);
   }
 
+  var id = 0;
+
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+
+      this.id = id++;
+      this.sub = [];
+    }
+
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        if (Dep.target) {
+          Dep.target.addDep(this); // 让watcher,去存放dep
+        }
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.sub.forEach(function (watcher) {
+          return watcher.update();
+        });
+      }
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        this.subs.push(watcher);
+      }
+    }]);
+
+    return Dep;
+  }();
+
+  var stack = [];
+  function pushTarget(watch) {
+    Dep.target = watch;
+    stack.push(watch);
+  }
+  function popTarget() {
+    stack.pop();
+    Dep.target = stack[stack.length - 1];
+  }
+
   var Observer = /*#__PURE__*/function () {
     function Observer(value) {
       _classCallCheck(this, Observer);
@@ -222,6 +267,7 @@
         configurable: false,
         value: this
       });
+      this.dep = new Dep(); // 专门为数组设计的
 
       if (Array.isArray(value)) {
         value.__proto__ = arrayMethods;
@@ -255,17 +301,44 @@
   }();
 
   function defineReactive(data, key, value) {
-    observe(value);
+    var childOb = observe(value);
+    var dep = new Dep();
     Object.defineProperty(data, key, {
       get: function get() {
+        if (Dep.target) {
+          // 如果取值时有watcher
+          dep.depend(); // 让watcher保存dep，并且让dep 保存watcher
+
+          if (childOb) {
+            childOb.dep.depend(); // 收集数组依赖
+
+            if (Array.isArray(value)) {
+              // 如果内部还是数组
+              dependArray(value); // 不停的进行依赖收集
+            }
+          }
+        }
+
         return value;
       },
       set: function set(newValue) {
         if (newValue == value) return;
         observe(newValue);
         value = newValue;
+        dep.notify(); // 通知渲染watcher去更新
       }
     });
+  }
+
+  function dependArray(value) {
+    for (var i = 0; i < value.length; i++) {
+      var current = value[i];
+      current.__ob__ && current.__ob__.dep.depend();
+
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
   }
 
   function observe(data) {
@@ -337,7 +410,7 @@
   var TEXT_TYPE = 3;
   var root,
       currentParent,
-      stack = [];
+      stack$1 = [];
 
   function createASTElement(tagName, attrs) {
     return {
@@ -357,12 +430,12 @@
     }
 
     currentParent = element;
-    stack.push(element);
+    stack$1.push(element);
   }
 
   function end(tagName) {
-    var element = stack.pop();
-    currentParent = stack[stack.length - 1];
+    var element = stack$1.pop();
+    currentParent = stack$1[stack$1.length - 1];
 
     if (currentParent) {
       element.parent = currentParent;
@@ -535,7 +608,7 @@
     return renderFn;
   }
 
-  var id = 0;
+  var id$1 = 0;
 
   var Watcher = /*#__PURE__*/function () {
     function Watcher(vm, exprOrFn, cb, options) {
@@ -550,14 +623,34 @@
 
       this.cb = cb;
       this.options = options;
-      this.id = id++;
+      this.id = id$1++;
+      this.deps = [];
+      this.depsId = new Set();
       this.getter();
     }
 
     _createClass(Watcher, [{
+      key: "addDep",
+      value: function addDep(dep) {
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          this.depsId.add(id);
+          this.depsId.push(dep);
+          dep.addSub(this);
+        }
+      }
+    }, {
       key: "get",
       value: function get() {
+        pushTarget(this);
         this.getter();
+        popTarget();
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        this.get();
       }
     }]);
 
