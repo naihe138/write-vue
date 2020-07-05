@@ -42,6 +42,55 @@
     return Constructor;
   }
 
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
+  }
+
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
+
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
+      }
+    }
+
+    return target;
+  }
+
   function _slicedToArray(arr, i) {
     return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
   }
@@ -580,12 +629,75 @@
 
     new Watcher(vm, updateComponent, function () {}, true);
   }
+  function callHook(vm, hook) {
+    var handlers = vm.$options[hook];
+
+    if (handlers) {
+      for (var i = 0; i < handlers.length; i++) {
+        handlers[i].call(vm);
+      }
+    }
+  }
+
+  var LIFECYCLE_HOOKS = ['beforeCteate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed'];
+  var strate = {};
+
+  function mergeHook(parentVal, childVal) {
+    if (childVal) {
+      if (parentVal) {
+        return parentVal.concat(childVal);
+      } else {
+        return [childVal];
+      }
+    } else {
+      return parentVal;
+    }
+  }
+
+  LIFECYCLE_HOOKS.forEach(function (hook) {
+    strate[hook] = mergeHook;
+  });
+  function mergeOptions(parent, child) {
+    var options = {};
+
+    for (var key in parent) {
+      mergeField(key);
+    }
+
+    for (var _key in child) {
+      if (!parent.hasOwnProperty(_key)) {
+        mergeField(_key);
+      }
+    }
+
+    function mergeField(key) {
+      if (strate[key]) {
+        options[key] = strate[key](parent[key], child[key]);
+      } else {
+        if (_typeof(parent[key]) === 'object' && _typeof(child[key]) === 'object') {
+          options[key] = _objectSpread2(_objectSpread2({}, parent[key]), child[key]);
+        } else {
+          options[key] = child[key];
+        }
+      }
+    }
+
+    return options;
+  }
 
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
       var vm = this;
-      vm.$options = options;
+      vm.$options = mergeOptions(vm.constructor.options, options);
+      callHook(vm, 'berforCreate');
       initState(vm);
+      callHook(vm, 'created');
+
+      if (vm.$options.el) {
+        callHook(vm, 'beforeMount');
+        vm.$mount(vm.$options.el);
+        callHook(vm, 'mounted');
+      }
     };
 
     Vue.prototype.$mount = function (el) {
@@ -660,10 +772,20 @@
     };
   }
 
+  function initGlobalAPI(Vue) {
+    Vue.options = {};
+
+    Vue.mixin = function (mixin) {
+      this.options = mergeOptions(this.options, mixin);
+      return this;
+    };
+  }
+
   function Vue(options) {
     this._init(options);
   }
 
+  initGlobalAPI(Vue);
   initMixin(Vue);
   lifecycleMixin(Vue);
   renderMixin(Vue);
