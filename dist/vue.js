@@ -521,17 +521,54 @@
     if (isReadElement) {
       var oldElm = oldVnode;
       var parentElm = oldElm.parentNode;
-      var el = createElm(vnode);
-      parentElm.insertBefort(el, oldElm.nextSibling);
+      var el = creatElm(newVnode);
+      parentElm.insertBefore(el, oldElm.nextSibling);
       parentElm.removeChild(oldVnode);
       return el;
+    }
+  }
+
+  function creatElm(vnode) {
+    var tag = vnode.tag,
+        children = vnode.children,
+        key = vnode.key,
+        data = vnode.data,
+        text = vnode.text;
+
+    if (typeof tag === 'string') {
+      vnode.el = document.createElement(tag);
+      updateProperties(vnode);
+      children.forEach(function (child) {
+        return vnode.el.appendChild(creatElm(child));
+      });
+    } else {
+      vnode.el = document.createTextNode(text);
+    }
+
+    return vnode.el;
+  }
+
+  function updateProperties(vnode) {
+    var newProps = vnode.data || {};
+    var el = vnode.el;
+
+    for (var key in newProps) {
+      if (key === 'style') {
+        for (var styleName in newProps.style) {
+          el.style[styleName] = newProps.style[styleName];
+        }
+      } else if (key === 'class') {
+        el.className = newProps["class"];
+      } else {
+        el.setAttribute(key, newProps[key]);
+      }
     }
   }
 
   function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
       var vm = this;
-      vm.$el = patch(vm.$el);
+      vm.$el = patch(vm.$el, vnode);
     };
   }
   function mountComponent(vm, el) {
@@ -572,7 +609,7 @@
   }
 
   function createTextNode(text) {
-    return vnode$1(undefined, undefined, undefined, undefined, text);
+    return vnode(undefined, undefined, undefined, undefined, text);
   }
   function createElement(tag) {
     var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -586,10 +623,10 @@
       children[_key - 2] = arguments[_key];
     }
 
-    return vnode$1(tag, data, key, children);
+    return vnode(tag, data, key, children);
   }
 
-  function vnode$1(tag, data, key, children, text) {
+  function vnode(tag, data, key, children, text) {
     return {
       tag: tag,
       data: data,

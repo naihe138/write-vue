@@ -4,20 +4,20 @@ export function patch(oldVnode, newVnode) {
     const oldElm = oldVnode
     const parentElm = oldElm.parentNode
 
-    let el = createElm(vnode)
-    parentElm.insertBefort(el, oldElm.nextSibling)
+    let el = creatElm(newVnode)
+    parentElm.insertBefore(el, oldElm.nextSibling)
     parentElm.removeChild(oldVnode)
     return el
   }
 }
 
-function ceateElm(vnode) {
+function creatElm(vnode) {
   let { tag, children, key, data, text } = vnode
   if(typeof tag === 'string') {
     vnode.el = document.createElement(tag)
     updateProperties(vnode)
     children.forEach(child => {
-      return vnode.el.appendChild(createElm(child))
+      return vnode.el.appendChild(creatElm(child))
     })
   } else {
     vnode.el = document.createTextNode(text)
@@ -36,7 +36,7 @@ function updateProperties(vnode) {
     } else if (key === 'class'){
       el.className = newProps.class
     } else {
-      
+      el.setAttribute(key, newProps[key])
     }
   }
 }
