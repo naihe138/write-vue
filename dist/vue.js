@@ -608,6 +608,50 @@
     return renderFn;
   }
 
+  var callbacks = [];
+
+  function flushCallback() {
+    callbacks.forEach(function (cb) {
+      return cb();
+    });
+  }
+
+  var timerFunc = function timerFunc() {
+    Promise.resolve().then(flushCallback);
+  };
+
+  function nextTick(cb) {
+    callbacks.push(cb);
+    timerFunc();
+  }
+
+  var has = {};
+  var queue = [];
+
+  function flushSchedulerQueue() {
+    for (var i = 0; i < queue.length; i++) {
+      queue[i].run();
+    }
+
+    queue = [];
+    has = [];
+  }
+
+  var pending = false;
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+
+    if (!has[id]) {
+      has[id] = true;
+      queue.push(watcher);
+
+      if (!pending) {
+        nextTick(flushSchedulerQueue);
+        pending = true;
+      }
+    }
+  }
+
   var id$1 = 0;
 
   var Watcher = /*#__PURE__*/function () {
@@ -650,6 +694,11 @@
     }, {
       key: "update",
       value: function update() {
+        queueWatcher(this);
+      }
+    }, {
+      key: "run",
+      value: function run() {
         this.get();
       }
     }]);
