@@ -1,4 +1,5 @@
 import { observe } from './observer/index' 
+import { bind, noop } from './utils/index'
 export function initState(vm) {
   const opts = vm.$options;
   if (opts.props) {
@@ -20,7 +21,12 @@ export function initState(vm) {
 
 function initProps(vm) {}
 
-function initMethod(vm) {}
+function initMethod(vm) {
+  let methods = vm.$options.methods;
+  for (const key in methods) {
+    vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm)
+  }
+}
 
 function proxy(vm, source, key) {
   Object.defineProperty(vm, key, {
@@ -47,7 +53,9 @@ function initData(vm) {
   observe(data);
 }
 
-function initComputed(vm) {}
+function initComputed(vm) {
+
+}
 
 function initWatch(vm) {}
 
