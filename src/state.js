@@ -1,5 +1,7 @@
 import { observe } from './observer/index' 
 import { bind, noop } from './utils/index'
+import Watcher from './observer/watcher';
+import Dep from './observer/dep';
 export function initState(vm) {
   const opts = vm.$options;
   if (opts.props) {
@@ -54,7 +56,47 @@ function initData(vm) {
 }
 
 function initComputed(vm) {
+  const computed = vm.$options.computed
+  const watchers = vm._computedWatchers = Object.create(null)
+  for (const key in computed) {
+    const userDef = computed[key]
+    const getter = typeof userDef === 'function' ? userDef : userDef.get
+    watchers[key] = new Watcher(vm, getter, noop, { lazy: true })
+    if (!(key in vm)) {
+      defineComputed(vm, key, userDef)
+    }
+  }
+}
 
+const sharedPropertyDefinition = {
+  enumerable: true,
+  configurable: true,
+  get: noop,
+  set: noop
+}
+
+function defineComputed(vm, key, userDef) {
+  if (typeof userDef === 'function') {
+    sharedPropertyDefinition.get = createComputedGetter(key)
+  } else {
+    sharedPropertyDefinition.get = userDef.get
+  }
+  Object.defineProperty(vm, key, sharedPropertyDefinition)
+}
+
+function createComputedGetter(key) {
+  return function computedGetter() {
+    const watcher = this._computedWatchers[key]
+    if (watcher) {
+      if (watcher.dirty) {
+        watcher.evaluate()
+      }
+      if (Dep.target) {
+        watcher.depend()
+      }
+      return watcher.value
+    }
+  }
 }
 
 function initWatch(vm) {}

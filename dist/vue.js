@@ -213,6 +213,40 @@
   function hasOwn(obj, key) {
     return hasOwnProperty.call(obj, key);
   }
+  /**
+   * Simple bind polyfill for environments that do not support it,
+   * e.g., PhantomJS 1.x. Technically, we don't need this anymore
+   * since native bind is now performant enough in most browsers.
+   * But removing it would mean breaking code that was able to run in
+   * PhantomJS 1.x, so this must be kept for backward compatibility.
+   */
+
+  /* istanbul ignore next */
+
+  function polyfillBind(fn, ctx) {
+    function boundFn(a) {
+      var l = arguments.length;
+      return l ? l > 1 ? fn.apply(ctx, arguments) : fn.call(ctx, a) : fn.call(ctx);
+    }
+
+    boundFn._length = fn.length;
+    return boundFn;
+  }
+
+  function nativeBind(fn, ctx) {
+    return fn.bind(ctx);
+  }
+
+  var bind = Function.prototype.bind ? nativeBind : polyfillBind;
+  /* eslint-disable no-unused-vars */
+
+  /**
+   * Perform no operation.
+   * Stubbing args to make Flow happy without leaving useless transpiled code
+   * with ...rest (https://flow.org/blog/2017/05/07/Strict-Function-Call-Arity/).
+   */
+
+  function noop() {}
 
   var id = 0;
 
@@ -354,20 +388,158 @@
     }
   }
 
+  var callbacks = [];
+
+  function flushCallback() {
+    callbacks.forEach(function (cb) {
+      return cb();
+    });
+  }
+
+  var timerFunc = function timerFunc() {
+    Promise.resolve().then(flushCallback);
+  };
+
+  function nextTick(cb) {
+    callbacks.push(cb);
+    timerFunc();
+  }
+
+  var has = {};
+  var queue = [];
+
+  function flushSchedulerQueue() {
+    for (var i = 0; i < queue.length; i++) {
+      queue[i].run();
+    }
+
+    queue = [];
+    has = [];
+  }
+
+  var pending = false;
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+
+    if (!has[id]) {
+      has[id] = true;
+      queue.push(watcher);
+
+      if (!pending) {
+        nextTick(flushSchedulerQueue);
+        pending = true;
+      }
+    }
+  }
+
+  var id$1 = 0;
+
+  var Watcher = /*#__PURE__*/function () {
+    function Watcher(vm, exprOrFn, cb, options) {
+      _classCallCheck(this, Watcher);
+
+      this.vm = vm;
+      this.exprOrFn = exprOrFn;
+
+      if (typeof exprOrFn === 'function') {
+        this.getter = exprOrFn;
+      }
+
+      if (options) {
+        this.lazy = !!options.lazy;
+      } else {
+        this.lazy = false;
+      }
+
+      this.cb = cb;
+      this.options = options;
+      this.dirty = this.lazy;
+      this.id = id$1++;
+      this.deps = [];
+      this.depsId = new Set();
+      this.value = this.lazy ? undefined : this.get();
+    }
+
+    _createClass(Watcher, [{
+      key: "addDep",
+      value: function addDep(dep) {
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          this.depsId.add(id);
+          this.deps.push(dep);
+          dep.addSub(this);
+        }
+      }
+    }, {
+      key: "get",
+      value: function get() {
+        var vm = this.vm;
+        pushTarget(this);
+        var value = this.getter.call(vm, vm);
+        popTarget();
+        return value;
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        if (this.lazy) {
+          this.dirty = true;
+        } else {
+          queueWatcher(this);
+        }
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        this.get();
+      }
+    }, {
+      key: "evaluate",
+      value: function evaluate() {
+        this.value = this.get();
+        this.dirty = false;
+      }
+    }, {
+      key: "depend",
+      value: function depend() {
+        var i = this.deps.length;
+
+        while (i--) {
+          this.deps[i].depend();
+        }
+      }
+    }]);
+
+    return Watcher;
+  }();
+
   function initState(vm) {
     var opts = vm.$options;
 
     if (opts.props) ;
 
-    if (opts.methods) ;
+    if (opts.methods) {
+      initMethod(vm);
+    }
 
     if (opts.data) {
       initData(vm);
     }
 
-    if (opts.computed) ;
+    if (opts.computed) {
+      initComputed(vm);
+    }
 
     if (opts.watch) ;
+  }
+
+  function initMethod(vm) {
+    var methods = vm.$options.methods;
+
+    for (var key in methods) {
+      vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm);
+    }
   }
 
   function proxy(vm, source, key) {
@@ -393,6 +565,58 @@
     }
 
     observe(data);
+  }
+
+  function initComputed(vm) {
+    var computed = vm.$options.computed;
+    var watchers = vm._computedWatchers = Object.create(null);
+
+    for (var key in computed) {
+      var userDef = computed[key];
+      var getter = typeof userDef === 'function' ? userDef : userDef.get;
+      watchers[key] = new Watcher(vm, getter, noop, {
+        lazy: true
+      });
+
+      if (!(key in vm)) {
+        defineComputed(vm, key, userDef);
+      }
+    }
+  }
+
+  var sharedPropertyDefinition = {
+    enumerable: true,
+    configurable: true,
+    get: noop,
+    set: noop
+  };
+
+  function defineComputed(vm, key, userDef) {
+    if (typeof userDef === 'function') {
+      sharedPropertyDefinition.get = createComputedGetter(key);
+    } else {
+      sharedPropertyDefinition.get = userDef.get;
+    }
+
+    Object.defineProperty(vm, key, sharedPropertyDefinition);
+  }
+
+  function createComputedGetter(key) {
+    return function computedGetter() {
+      var watcher = this._computedWatchers[key];
+
+      if (watcher) {
+        if (watcher.dirty) {
+          watcher.evaluate();
+        }
+
+        if (Dep.target) {
+          watcher.depend();
+        }
+
+        return watcher.value;
+      }
+    };
   }
 
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
@@ -607,104 +831,6 @@
     var renderFn = new Function(render);
     return renderFn;
   }
-
-  var callbacks = [];
-
-  function flushCallback() {
-    callbacks.forEach(function (cb) {
-      return cb();
-    });
-  }
-
-  var timerFunc = function timerFunc() {
-    Promise.resolve().then(flushCallback);
-  };
-
-  function nextTick(cb) {
-    callbacks.push(cb);
-    timerFunc();
-  }
-
-  var has = {};
-  var queue = [];
-
-  function flushSchedulerQueue() {
-    for (var i = 0; i < queue.length; i++) {
-      queue[i].run();
-    }
-
-    queue = [];
-    has = [];
-  }
-
-  var pending = false;
-  function queueWatcher(watcher) {
-    var id = watcher.id;
-
-    if (!has[id]) {
-      has[id] = true;
-      queue.push(watcher);
-
-      if (!pending) {
-        nextTick(flushSchedulerQueue);
-        pending = true;
-      }
-    }
-  }
-
-  var id$1 = 0;
-
-  var Watcher = /*#__PURE__*/function () {
-    function Watcher(vm, exprOrFn, cb, options) {
-      _classCallCheck(this, Watcher);
-
-      this.vm = vm;
-      this.exprOrFn = exprOrFn;
-
-      if (typeof exprOrFn === 'function') {
-        this.getter = exprOrFn;
-      }
-
-      this.cb = cb;
-      this.options = options;
-      this.id = id$1++;
-      this.deps = [];
-      this.depsId = new Set();
-      this.get();
-    }
-
-    _createClass(Watcher, [{
-      key: "addDep",
-      value: function addDep(dep) {
-        var id = dep.id;
-
-        if (!this.depsId.has(id)) {
-          this.depsId.add(id);
-          this.deps.push(dep);
-          dep.addSub(this);
-        }
-      }
-    }, {
-      key: "get",
-      value: function get() {
-        pushTarget(this);
-        this.getter();
-        popTarget();
-      }
-    }, {
-      key: "update",
-      value: function update() {
-        queueWatcher(this);
-      }
-    }, {
-      key: "run",
-      value: function run() {
-        this.get();
-      }
-    }]);
-
-    return Watcher;
-  }();
 
   function patch(oldVnode, newVnode) {
     var isReadElement = oldVnode.nodeType;
