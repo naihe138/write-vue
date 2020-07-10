@@ -159,7 +159,7 @@ function generate(el) {
 export function compileToFunctions(template) {
   parseHTML(template)
   let code = generate(root)
-  console.log(code)
+  // console.log(code)
   let render = `with(this){return ${code}}`;
   let renderFn = new Function(render);
   return renderFn

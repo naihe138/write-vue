@@ -1,5 +1,5 @@
 import { observe } from './observer/index' 
-import { bind, noop } from './utils/index'
+import { bind, noop, isPlainObject } from './utils/index'
 import Watcher from './observer/watcher';
 import Dep from './observer/dep';
 export function initState(vm) {
@@ -88,9 +88,10 @@ function createComputedGetter(key) {
   return function computedGetter() {
     const watcher = this._computedWatchers[key]
     if (watcher) {
-      if (watcher.dirty) {
+      if (watcher.dirty) {// 给computed的属性添加订阅watchers
         watcher.evaluate()
       }
+      // 把渲染watcher 添加到属性的订阅里面去，这很关键
       if (Dep.target) {
         watcher.depend()
       }
@@ -99,5 +100,22 @@ function createComputedGetter(key) {
   }
 }
 
-function initWatch(vm) {}
+function initWatch(vm) {
+  let watch = vm.$options.watch
+  for (let key in watch) {
+    const handler = watch[key]
+    createWatcher(vm, key, handler)
+  }
+}
+
+export function createWatcher(vm, expOrFn, handler, options) {
+  if (isPlainObject(handler)) {
+    options = handler
+    handler = handler.handler
+  }
+  if (typeof handler === 'string') {
+    handler = vm[handler]
+  }
+  return vm.$watch(expOrFn, handler, options)
+}
 

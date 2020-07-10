@@ -1,5 +1,6 @@
-import { pushTarget, popTarget } from "./dep";
-import { queueWatcher } from "../scheduler";
+import { pushTarget, popTarget } from './dep'
+import { queueWatcher } from '../scheduler'
+import { parsePath } from '../utils/index'
 
 let id = 0;
 class Watcher{
@@ -8,11 +9,14 @@ class Watcher{
     this.exprOrFn = exprOrFn
     if (typeof exprOrFn === 'function') {
       this.getter = exprOrFn
+    } else {
+      this.getter = parsePath(exprOrFn) // user watcher 
     }
     if (options) {
       this.lazy = !!options.lazy
+      this.user = !!options.user
     } else {
-      this.lazy = false
+      this.user = this.lazy = false
     }
     this.cb = cb
     this.options = options
@@ -45,7 +49,18 @@ class Watcher{
     }
   }
   run () {
-    this.get()
+    const value = this.get()
+    const oldValue = this.value
+    this.value = value
+    if (this.user) {
+      try{
+        this.cb.call(this.vm, value, oldValue)
+      } catch(error) {
+        console.error(error)
+      }
+    } else {
+      this.cb && this.cb.call(this.vm, oldValue, value)
+    }
   }
   evaluate() {
     this.value = this.get()

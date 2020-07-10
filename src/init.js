@@ -1,7 +1,9 @@
-import { initState } from './state'
+import { initState, createWatcher } from './state'
 import { compileToFunctions } from './compile/index'
 import { mountComponent, callHook } from './lifecycle'
 import { mergeOptions } from './utils/mergeOptions'
+import { isPlainObject } from './utils/index'
+import Watcher from './observer/watcher'
 
 export function initMixin(Vue) {
   Vue.prototype._init = function (options) {
@@ -29,5 +31,22 @@ export function initMixin(Vue) {
       options.render = render
     }
     mountComponent(vm, el);
+  }
+  Vue.prototype.$watch = function (expOrFn, cb, options) {
+    const vm = this
+    if (isPlainObject(cb)) {
+      return createWatcher(vm, expOrFn, cb, options)
+    }
+    options = options || {}
+    options.user = true
+    const watcher = new Watcher(vm, expOrFn, cb, options)
+    console.log(11, watcher)
+    if (options.immediate) {
+      try {
+        cb.call(vm, watcher.value)
+      } catch(err) {
+        console.error('options.immediate error')
+      }
+    }
   }
 }

@@ -8,7 +8,7 @@
 <body>
   <div id="root">
     <div>
-      <p style="color: red;" id="cc">{{me}}</p>
+      <p style="color: red;" id="cc">{{name}}</p>
     </div>
   </div>
   <script src="../dist/vue.js"></script>
@@ -21,16 +21,21 @@
           age: '123'
         }
       },
-      computed: {
-        me() {
-          return this.name + this.age
+      // computed: {
+      //   me() {
+      //     return this.name + this.age
+      //   }
+      // },
+      watch: {
+        name(oldValue, newValue) {
+          console.log(oldValue, newValue)
         }
       },
       mounted() {
-        console.log('mounted');
+        // console.log('mounted');
         setTimeout(() => {
-          console.log('1111');
-          this.age = '567'
+          // console.log('1111');
+          this.name = '567'
         }, 2000)
       }
     })

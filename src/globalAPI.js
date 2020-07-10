@@ -7,4 +7,3 @@ export function initGlobalAPI(Vue) {
     return this
   }
 }
-

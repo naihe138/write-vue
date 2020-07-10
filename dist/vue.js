@@ -181,6 +181,10 @@
   });
 
   var emptyObject = Object.freeze({});
+  var _toString = Object.prototype.toString;
+  function isPlainObject(obj) {
+    return _toString.call(obj) === '[object Object]';
+  }
   function makeMap(str, expectsLowerCase) {
     var map = Object.create(null);
     var list = str.split(',');
@@ -247,6 +251,17 @@
    */
 
   function noop() {}
+  function parsePath(path) {
+    var segments = path.split('.');
+    return function (obj) {
+      for (var i = 0; i < segments.length; i++) {
+        if (!obj) return;
+        obj = obj[segments[i]];
+      }
+
+      return obj;
+    };
+  }
 
   var id = 0;
 
@@ -443,12 +458,15 @@
 
       if (typeof exprOrFn === 'function') {
         this.getter = exprOrFn;
+      } else {
+        this.getter = parsePath(exprOrFn); // user watcher 
       }
 
       if (options) {
         this.lazy = !!options.lazy;
+        this.user = !!options.user;
       } else {
-        this.lazy = false;
+        this.user = this.lazy = false;
       }
 
       this.cb = cb;
@@ -492,7 +510,19 @@
     }, {
       key: "run",
       value: function run() {
-        this.get();
+        var value = this.get();
+        var oldValue = this.value;
+        this.value = value;
+
+        if (this.user) {
+          try {
+            this.cb.call(this.vm, value, oldValue);
+          } catch (error) {
+            console.error(error);
+          }
+        } else {
+          this.cb && this.cb.call(this.vm, oldValue, value);
+        }
       }
     }, {
       key: "evaluate",
@@ -531,7 +561,9 @@
       initComputed(vm);
     }
 
-    if (opts.watch) ;
+    if (opts.watch) {
+      initWatch(vm);
+    }
   }
 
   function initMethod(vm) {
@@ -607,8 +639,10 @@
 
       if (watcher) {
         if (watcher.dirty) {
+          // 给computed的属性添加订阅watchers
           watcher.evaluate();
-        }
+        } // 把渲染watcher 添加到属性的订阅里面去，这很关键
+
 
         if (Dep.target) {
           watcher.depend();
@@ -617,6 +651,28 @@
         return watcher.value;
       }
     };
+  }
+
+  function initWatch(vm) {
+    var watch = vm.$options.watch;
+
+    for (var key in watch) {
+      var handler = watch[key];
+      createWatcher(vm, key, handler);
+    }
+  }
+
+  function createWatcher(vm, expOrFn, handler, options) {
+    if (isPlainObject(handler)) {
+      options = handler;
+      handler = handler.handler;
+    }
+
+    if (typeof handler === 'string') {
+      handler = vm[handler];
+    }
+
+    return vm.$watch(expOrFn, handler, options);
   }
 
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
@@ -825,8 +881,8 @@
 
   function compileToFunctions(template) {
     parseHTML(template);
-    var code = generate(root);
-    console.log(code);
+    var code = generate(root); // console.log(code)
+
     var render = "with(this){return ".concat(code, "}");
     var renderFn = new Function(render);
     return renderFn;
@@ -985,6 +1041,27 @@
       }
 
       mountComponent(vm, el);
+    };
+
+    Vue.prototype.$watch = function (expOrFn, cb, options) {
+      var vm = this;
+
+      if (isPlainObject(cb)) {
+        return createWatcher(vm, expOrFn, cb, options);
+      }
+
+      options = options || {};
+      options.user = true;
+      var watcher = new Watcher(vm, expOrFn, cb, options);
+      console.log(11, watcher);
+
+      if (options.immediate) {
+        try {
+          cb.call(vm, watcher.value);
+        } catch (err) {
+          console.error('options.immediate error');
+        }
+      }
     };
   }
 
