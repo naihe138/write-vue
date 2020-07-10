@@ -19,6 +19,7 @@ function createASTElement(tagName, attrs) {
     parent: null
   }
 }
+// 开始< 符号处理
 function start(tagName, attrs) {
   let element = createASTElement(tagName, attrs);
   if (!root) {
@@ -27,6 +28,7 @@ function start(tagName, attrs) {
   currentParent = element
   stack.push(element)
 }
+// 结束> 符号处理
 function end(tagName) {
   let element = stack.pop()
   currentParent = stack[stack.length - 1]
@@ -35,6 +37,7 @@ function end(tagName) {
     currentParent.children.push(element)
   }
 }
+// 空格和{{ }} 处理
 function chars(text) {
   // text = text.replace(/\s/g, '')
   if (text && text.replace(/\s/g, '')) {
@@ -89,13 +92,13 @@ function parseHTML(html) {
       }
     }
   }
+  // 截取字符串
   function advance(n) {
     html = html.substring(n)
   }
 }
 
 // 生成代码
-
 function gen(node) {
   if (node.type == 1) {
     return generate(node);
@@ -122,6 +125,7 @@ function gen(node) {
     return `_v(${tokens.join('+')})`;
   }
 }
+
 function getChildren(el) { // 生成儿子节点
   const children = el.children;
   if (children) {
@@ -130,6 +134,7 @@ function getChildren(el) { // 生成儿子节点
     return false;
   }
 }
+
 function genProps(attrs) { // 生成属性
   let str = '';
   for (let i = 0; i < attrs.length; i++) {
@@ -157,9 +162,11 @@ function generate(el) {
 }
 
 export function compileToFunctions(template) {
+  // 解析template
   parseHTML(template)
+  // 从解析template成ast再生成code
   let code = generate(root)
-  // console.log(code)
+  // 封装render函数
   let render = `with(this){return ${code}}`;
   let renderFn = new Function(render);
   return renderFn

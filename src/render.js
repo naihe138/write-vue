@@ -14,7 +14,7 @@ export function renderMixin(Vue) {
   Vue.prototype._s = function (val) {
     return val == null ? '' : (typeof val === 'object' ? JSON.stringify(val) : val);
   }
-  
+  // 挂载render函数
   Vue.prototype._render = function() {
     const vm = this
     const { render } = this.$options

@@ -3,7 +3,7 @@ let oldArrayProtoMethods = Array.prototype
 export let arrayMethods = Object.create(oldArrayProtoMethods)
 
 let methods = ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice']
-
+// 数组方法拦截
 methods.forEach(method => {
   arrayMethods[method] = function (...args) {
     const result = oldArrayProtoMethods[method].apply(this, args);

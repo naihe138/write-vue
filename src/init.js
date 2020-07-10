@@ -5,19 +5,28 @@ import { mergeOptions } from './utils/mergeOptions'
 import { isPlainObject } from './utils/index'
 import Watcher from './observer/watcher'
 
+// 初始化函数
 export function initMixin(Vue) {
   Vue.prototype._init = function (options) {
     const vm = this
+    // 合并全局对象到和配置对象到vm.$options中
     vm.$options = mergeOptions(vm.constructor.options, options)
+    // 执行berforCreate 生命钩子函数
     callHook(vm, 'berforCreate')
+    // 初始化数据
     initState(vm)
+    // 执行created 生命钩子函数
     callHook(vm, 'created')
     if (vm.$options.el) {
+      // 执行beforeMount生命钩子函数
       callHook(vm, 'beforeMount')
+      // 执行组件挂载
       vm.$mount(vm.$options.el)
+      // 执行mounted生命钩子函数
       callHook(vm, 'mounted')
     }
   }
+  // 挂载方法
   Vue.prototype.$mount = function (el) {
     const vm = this
     const options = vm.$options
@@ -27,6 +36,7 @@ export function initMixin(Vue) {
       if (!template && el) {
         template = el.outerHTML
       }
+      // 解析template成，返回renderh函数
       const render = compileToFunctions(template)
       options.render = render
     }

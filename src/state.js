@@ -2,6 +2,7 @@ import { observe } from './observer/index'
 import { bind, noop, isPlainObject } from './utils/index'
 import Watcher from './observer/watcher';
 import Dep from './observer/dep';
+// 初始化所有配置
 export function initState(vm) {
   const opts = vm.$options;
   if (opts.props) {
