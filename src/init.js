@@ -40,7 +40,6 @@ export function initMixin(Vue) {
     options = options || {}
     options.user = true
     const watcher = new Watcher(vm, expOrFn, cb, options)
-    console.log(11, watcher)
     if (options.immediate) {
       try {
         cb.call(vm, watcher.value)
