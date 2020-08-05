@@ -1,10 +1,10 @@
+
 export function patch(oldVnode, newVnode) {
   // 如果是第一次渲染
-  if (!newVnode && oldVnode) {
+  if (oldVnode.nodeType && oldVnode) {
     const oldElm = oldVnode
     const parentElm = oldElm.parentNode
-
-    let el = creatElm(newVnode)
+    let el = createElm(newVnode)
     parentElm.insertBefore(el, oldElm.nextSibling)
     parentElm.removeChild(oldVnode)
     return el
@@ -35,6 +35,7 @@ export function patch(oldVnode, newVnode) {
       el.appendChild(fragment)
     }
   }
+  return newVnode.el
 }
 
 function updateChildrens(oldChildren, newChildren, parent) {
@@ -48,7 +49,7 @@ function updateChildrens(oldChildren, newChildren, parent) {
   let newEndIndex = newChildren.length - 1
   let newEndVnode = newChildren[newEndIndex]
 
-  let map = makeIndexByKey(oldVnode)
+  let map = makeIndexByKey(oldChildren)
 
   while(oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
     if(!oldStartVnode){ // 在比对过程中，可能出现空值情况则直接跳过

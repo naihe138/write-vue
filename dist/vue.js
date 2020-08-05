@@ -918,10 +918,10 @@
 
   function patch(oldVnode, newVnode) {
     // 如果是第一次渲染
-    if (!newVnode && oldVnode) {
+    if (oldVnode.nodeType && oldVnode) {
       var oldElm = oldVnode;
       var parentElm = oldElm.parentNode;
-      var el = creatElm(newVnode);
+      var el = createElm(newVnode);
       parentElm.insertBefore(el, oldElm.nextSibling);
       parentElm.removeChild(oldVnode);
       return el;
@@ -958,6 +958,8 @@
         _el.appendChild(fragment);
       }
     }
+
+    return newVnode.el;
   }
 
   function updateChildrens(oldChildren, newChildren, parent) {
@@ -969,7 +971,7 @@
     var newStartVnode = newChildren[0];
     var newEndIndex = newChildren.length - 1;
     var newEndVnode = newChildren[newEndIndex];
-    var map = makeIndexByKey(oldVnode);
+    var map = makeIndexByKey(oldChildren);
 
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
       if (!oldStartVnode) {
@@ -1311,6 +1313,10 @@
     };
   }
 
+  // import { compileToFunction } from './compile/index'
+  // import { patch, createElm } from './vdom/patch'
+  //-----------分割线 以上是测试代码
+
   function Vue(options) {
     // 执行初始化函数，并把参数传递进去
     this._init(options);
@@ -1324,28 +1330,6 @@
   lifecycleMixin(Vue); // 初始化渲染方法
 
   renderMixin(Vue); //-----------分割线 以下是测试代码
-  // 1.创建第一个虚拟节点
-
-  var vm1 = new Vue({
-    data: {
-      name: 'aa'
-    }
-  });
-  var render1 = compileToFunction("\n  <div>\n    <p key=\"A\">A</p>\n    <p key=\"B\">B</p>\n    <p key=\"C\">C</p>\n  </div>");
-  var oldVnode$1 = render1.call(vm1); // 2.创建第二个虚拟节点
-
-  var vm2 = new Vue({
-    data: {
-      name: 'bb'
-    }
-  });
-  var render2 = compileToFunction("\n  <div>\n    <p key=\"A\">A</p>\n    <p key=\"B\">B</p>\n    <p key=\"C\">C</p>\n    <p key=\"D\">D</p>\n  </div>");
-  var newVnode$1 = render2.call(vm1); // // 3.通过第一个虚拟节点做首次渲染
-
-  var el = createElm(oldVnode$1);
-  document.body.appendChild(el); // 4.调用patch方法进行对比操作
-
-  patch(oldVnode$1, newVnode$1);
 
   return Vue;
 

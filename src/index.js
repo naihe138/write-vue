@@ -5,8 +5,8 @@ import { initGlobalAPI } from './globalAPI';
 
 //-----------分割线 以下是测试代码
 
-import { compileToFunction } from './compile/index'
-import { patch, createElm } from './vdom/patch'
+// import { compileToFunction } from './compile/index'
+// import { patch, createElm } from './vdom/patch'
 
 //-----------分割线 以上是测试代码
 
@@ -25,42 +25,40 @@ renderMixin(Vue)
 
 //-----------分割线 以下是测试代码
 
-// 1.创建第一个虚拟节点
-let vm1 = new Vue({
-  data: {
-    name: 'aa'
-  }
-})
-let render1 = compileToFunction(`
-  <div>
-    <p key="A">A</p>
-    <p key="B">B</p>
-    <p key="C">C</p>
-  </div>`
-)
-let oldVnode = render1.call(vm1)
 
+// let vm1 = new Vue({
+//   data: {
+//     name: 'aa'
+//   }
+// })
+// let render1 = compileToFunction(`
+//   <div>
+//     <p key="A">A</p>
+//     <p key="B">B</p>
+//     <p key="C">C</p>
+//   </div>`
+// )
+// let oldVnode = render1.call(vm1)
 
-// 2.创建第二个虚拟节点
-let vm2 = new Vue({
-  data:{
-    name:'bb'
-  }
-});
-let render2 = compileToFunction(`
-  <div>
-    <p key="A">A</p>
-    <p key="B">B</p>
-    <p key="C">C</p>
-    <p key="D">D</p>
-  </div>`
-)
-let newVnode = render2.call(vm1)
-// // 3.通过第一个虚拟节点做首次渲染
-let el = createElm(oldVnode)
-document.body.appendChild(el);
+// let vm2 = new Vue({
+//   data:{
+//     name:'bb'
+//   }
+// });
+// let render2 = compileToFunction(`
+//   <div>
+//     <p key="A">A</p>
+//     <p key="B">B</p>
+//     <p key="C">C</p>
+//     <p key="D">D</p>
+//   </div>`
+// )
+// let newVnode = render2.call(vm1)
+// let el = createElm(oldVnode)
+// document.body.appendChild(el);
 
-// 4.调用patch方法进行对比操作
-patch(oldVnode, newVnode);
+// patch(oldVnode, newVnode);
+
+//-----------分割线 以上是测试代码
 
 export default Vue

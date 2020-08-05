@@ -6,40 +6,40 @@
   <title>vue</title>
 </head>
 <body>
-  <!-- <div id="root">
+  <div id="root">
     <div>
       <p style="color: red;" id="cc">{{name}}</p>
     </div>
-  </div> -->
+  </div>
   <script src="../dist/vue.js"></script>
   <script>
     
-    // var vm = new Vue({
-    //   el: '#root',
-    //   data() {
-    //     return {
-    //       name: 'abc',
-    //       age: '123'
-    //     }
-    //   },
-    //   // computed: {
-    //   //   me() {
-    //   //     return this.name + this.age
-    //   //   }
-    //   // },
-    //   watch: {
-    //     name(oldValue, newValue) {
-    //       console.log(oldValue, newValue)
-    //     }
-    //   },
-    //   mounted() {
-    //     // console.log('mounted');
-    //     setTimeout(() => {
-    //       // console.log('1111');
-    //       this.name = '567'
-    //     }, 2000)
-    //   }
-    // })
+    var vm = new Vue({
+      el: '#root',
+      data() {
+        return {
+          name: 'abc',
+          age: '123'
+        }
+      },
+      // computed: {
+      //   me() {
+      //     return this.name + this.age
+      //   }
+      // },
+      watch: {
+        name(oldValue, newValue) {
+          console.log(oldValue, newValue)
+        }
+      },
+      mounted() {
+        // console.log('mounted');
+        setTimeout(() => {
+          // console.log('1111');
+          this.name = '567'
+        }, 2000)
+      }
+    })
   </script>
 </body>
 </html>
