@@ -1,5 +1,5 @@
 import { initState, createWatcher } from './state'
-import { compileToFunctions } from './compile/index'
+import { compileToFunction } from './compile/index'
 import { mountComponent, callHook } from './lifecycle'
 import { mergeOptions } from './utils/mergeOptions'
 import { isPlainObject } from './utils/index'
@@ -37,7 +37,7 @@ export function initMixin(Vue) {
         template = el.outerHTML
       }
       // 解析template成，返回renderh函数
-      const render = compileToFunctions(template)
+      const render = compileToFunction(template)
       options.render = render
     }
     mountComponent(vm, el);

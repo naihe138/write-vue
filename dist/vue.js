@@ -149,7 +149,8 @@
 
   var oldArrayProtoMethods = Array.prototype;
   var arrayMethods = Object.create(oldArrayProtoMethods);
-  var methods = ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'];
+  var methods = ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice']; // 数组方法拦截
+
   methods.forEach(function (method) {
     arrayMethods[method] = function () {
       for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
@@ -263,6 +264,7 @@
     };
   }
 
+  // 依赖收集
   var id = 0;
 
   var Dep = /*#__PURE__*/function () {
@@ -283,6 +285,7 @@
     }, {
       key: "notify",
       value: function notify() {
+        // 触发更新
         this.subs.forEach(function (watcher) {
           return watcher.update();
         });
@@ -297,11 +300,13 @@
     return Dep;
   }();
 
-  var stack = [];
+  var stack = []; // push当前watcher到stack 中，并记录当前watcer
+
   function pushTarget(watcher) {
     Dep.target = watcher;
     stack.push(watcher);
-  }
+  } // 运行完之后清空当前的watcher
+
   function popTarget() {
     stack.pop();
     Dep.target = stack[stack.length - 1];
@@ -311,6 +316,7 @@
     function Observer(value) {
       _classCallCheck(this, Observer);
 
+      // 给每个响应式对象添加一个__ob__属性。方便数组拦截方法使用，和以后监听过了，就直接返回监听过的对象
       Object.defineProperty(value, '__ob__', {
         enumerable: false,
         configurable: false,
@@ -319,9 +325,12 @@
       this.dep = new Dep(); // 专门为数组设计的
 
       if (Array.isArray(value)) {
-        value.__proto__ = arrayMethods;
+        // 拦截数组方法，这么做提升了很多性能
+        value.__proto__ = arrayMethods; // 给数组的每一个值设置监听
+
         this.observeArray(value);
       } else {
+        // 递归监听
         this.walk(value);
       }
     }
@@ -333,7 +342,8 @@
 
         for (var i = 0, len = keys.length; i < len; i++) {
           var key = keys[i];
-          var value = data[key];
+          var value = data[key]; // 给对象设置get set
+
           defineReactive(data, key, value);
         }
       }
@@ -372,12 +382,14 @@
       },
       set: function set(newValue) {
         if (newValue == value) return;
-        observe(newValue);
+        observe(newValue); // 监听新的值
+
         value = newValue;
         dep.notify(); // 通知渲染watcher去更新
       }
     });
-  }
+  } // 数组的每一项进行收集
+
 
   function dependArray(value) {
     for (var i = 0; i < value.length; i++) {
@@ -388,7 +400,8 @@
         dependArray(current);
       }
     }
-  }
+  } // 数据监听
+
 
   function observe(data) {
     if (_typeof(data) !== 'object' && data != null) {
@@ -421,7 +434,7 @@
   }
 
   var has = {};
-  var queue = [];
+  var queue = []; // 调度
 
   function flushSchedulerQueue() {
     for (var i = 0; i < queue.length; i++) {
@@ -432,7 +445,8 @@
     has = [];
   }
 
-  var pending = false;
+  var pending = false; // 异步执行所有的watcher
+
   function queueWatcher(watcher) {
     var id = watcher.id;
 
@@ -447,7 +461,7 @@
     }
   }
 
-  var id$1 = 0;
+  var id$1 = 0; // 渲染watcher  computer user wather
 
   var Watcher = /*#__PURE__*/function () {
     function Watcher(vm, exprOrFn, cb, options) {
@@ -463,8 +477,9 @@
       }
 
       if (options) {
-        this.lazy = !!options.lazy;
-        this.user = !!options.user;
+        this.lazy = !!options.lazy; // 为computed 设计的
+
+        this.user = !!options.user; // 为user wather设计的
       } else {
         this.user = this.lazy = false;
       }
@@ -474,7 +489,8 @@
       this.dirty = this.lazy;
       this.id = id$1++;
       this.deps = [];
-      this.depsId = new Set();
+      this.depsId = new Set(); // dep 已经收集过相同的watcher 就不要重复收集了
+
       this.value = this.lazy ? undefined : this.get();
     }
 
@@ -493,7 +509,8 @@
       key: "get",
       value: function get() {
         var vm = this.vm;
-        pushTarget(this);
+        pushTarget(this); // 执行函数
+
         var value = this.getter.call(vm, vm);
         popTarget();
         return value;
@@ -512,7 +529,7 @@
       value: function run() {
         var value = this.get();
         var oldValue = this.value;
-        this.value = value;
+        this.value = value; // 执行cb
 
         if (this.user) {
           try {
@@ -523,13 +540,15 @@
         } else {
           this.cb && this.cb.call(this.vm, oldValue, value);
         }
-      }
+      } // 执行get，并且 this.dirty = false
+
     }, {
       key: "evaluate",
       value: function evaluate() {
         this.value = this.get();
         this.dirty = false;
-      }
+      } // 所有的属性收集当前的watcer
+
     }, {
       key: "depend",
       value: function depend() {
@@ -700,7 +719,8 @@
       attrs: attrs,
       parent: null
     };
-  }
+  } // 开始< 符号处理
+
 
   function start(tagName, attrs) {
     var element = createASTElement(tagName, attrs);
@@ -711,7 +731,8 @@
 
     currentParent = element;
     stack$1.push(element);
-  }
+  } // 结束> 符号处理
+
 
   function end(tagName) {
     var element = stack$1.pop();
@@ -721,7 +742,8 @@
       element.parent = currentParent;
       currentParent.children.push(element);
     }
-  }
+  } // 空格和{{ }} 处理
+
 
   function chars(text) {
     // text = text.replace(/\s/g, '')
@@ -791,7 +813,8 @@
           return match;
         }
       }
-    }
+    } // 截取字符串
+
 
     function advance(n) {
       html = html.substring(n);
@@ -879,9 +902,14 @@
     return code;
   }
 
-  function compileToFunctions(template) {
-    parseHTML(template);
-    var code = generate(root); // console.log(code)
+  function compileToFunction(template) {
+    root = undefined;
+    currentParent = undefined;
+    stack$1 = []; // 解析template
+
+    parseHTML(template); // 从解析template成ast再生成code
+
+    var code = generate(root); // 封装render函数
 
     var render = "with(this){return ".concat(code, "}");
     var renderFn = new Function(render);
@@ -889,19 +917,30 @@
   }
 
   function patch(oldVnode, newVnode) {
-    var isReadElement = oldVnode.nodeType;
+    console.log(oldVnode, newVnode); // 如果是第一次渲染
 
-    if (isReadElement) {
+    if (!newVnode && oldVnode) {
       var oldElm = oldVnode;
       var parentElm = oldElm.parentNode;
       var el = creatElm(newVnode);
       parentElm.insertBefore(el, oldElm.nextSibling);
       parentElm.removeChild(oldVnode);
       return el;
+    } else if (oldVnode.tag !== newVnode.tag) {
+      // 如果标签不一致说明是两个不同元素
+      oldVnode.el.parentNode.replaceChild(createElm(newVnode), oldVnode.el);
+    } else if (!oldVnode.tag) {
+      // 如果标签一致但是不存在则是文本节点
+      if (oldVnode.text !== newVnode.text) {
+        oldVnode.el.textContent = newVnode.text;
+      }
+    } else {
+      var _el = vnode.el = oldVnode.el;
+
+      updateProperties(newVnode, oldVnode.data);
     }
   }
-
-  function creatElm(vnode) {
+  function createElm(vnode) {
     var tag = vnode.tag,
         children = vnode.children,
         key = vnode.key,
@@ -912,7 +951,7 @@
       vnode.el = document.createElement(tag);
       updateProperties(vnode);
       children.forEach(function (child) {
-        return vnode.el.appendChild(creatElm(child));
+        return vnode.el.appendChild(createElm(child));
       });
     } else {
       vnode.el = document.createTextNode(text);
@@ -922,18 +961,35 @@
   }
 
   function updateProperties(vnode) {
+    var oldProps = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var newProps = vnode.data || {};
-    var el = vnode.el;
+    var el = vnode.el; // 比对样式
 
-    for (var key in newProps) {
-      if (key === 'style') {
+    var newStyle = newProps.style || {};
+    var oldStyle = oldProps.style || {};
+
+    for (var key in oldStyle) {
+      if (!newStyle[key]) {
+        el.style[key] = '';
+      }
+    } // 删除多余属性
+
+
+    for (var _key in oldProps) {
+      if (!newProps[_key]) {
+        el.removeAttribute(_key);
+      }
+    }
+
+    for (var _key2 in newProps) {
+      if (_key2 === 'style') {
         for (var styleName in newProps.style) {
           el.style[styleName] = newProps.style[styleName];
         }
-      } else if (key === 'class') {
+      } else if (_key2 === 'class') {
         el.className = newProps["class"];
       } else {
-        el.setAttribute(key, newProps[key]);
+        el.setAttribute(_key2, newProps[_key2]);
       }
     }
   }
@@ -943,7 +999,8 @@
       var vm = this;
       vm.$el = patch(vm.$el, vnode);
     };
-  }
+  } // 挂载组件
+
   function mountComponent(vm, el) {
     vm.$el = el;
 
@@ -952,7 +1009,8 @@
     };
 
     new Watcher(vm, updateComponent, function () {}, true);
-  }
+  } // 调用生命周期函数
+
   function callHook(vm, hook) {
     var handlers = vm.$options[hook];
 
@@ -1011,18 +1069,26 @@
 
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
-      var vm = this;
-      vm.$options = mergeOptions(vm.constructor.options, options);
-      callHook(vm, 'berforCreate');
-      initState(vm);
+      var vm = this; // 合并全局对象到和配置对象到vm.$options中
+
+      vm.$options = mergeOptions(vm.constructor.options, options); // 执行berforCreate 生命钩子函数
+
+      callHook(vm, 'berforCreate'); // 初始化数据
+
+      initState(vm); // 执行created 生命钩子函数
+
       callHook(vm, 'created');
 
       if (vm.$options.el) {
-        callHook(vm, 'beforeMount');
-        vm.$mount(vm.$options.el);
+        // 执行beforeMount生命钩子函数
+        callHook(vm, 'beforeMount'); // 执行组件挂载
+
+        vm.$mount(vm.$options.el); // 执行mounted生命钩子函数
+
         callHook(vm, 'mounted');
       }
-    };
+    }; // 挂载方法
+
 
     Vue.prototype.$mount = function (el) {
       var vm = this;
@@ -1034,9 +1100,10 @@
 
         if (!template && el) {
           template = el.outerHTML;
-        }
+        } // 解析template成，返回renderh函数
 
-        var render = compileToFunctions(template);
+
+        var render = compileToFunction(template);
         options.render = render;
       }
 
@@ -1053,7 +1120,6 @@
       options = options || {};
       options.user = true;
       var watcher = new Watcher(vm, expOrFn, cb, options);
-      console.log(11, watcher);
 
       if (options.immediate) {
         try {
@@ -1066,7 +1132,7 @@
   }
 
   function createTextNode(text) {
-    return vnode(undefined, undefined, undefined, undefined, text);
+    return vnode$1(undefined, undefined, undefined, undefined, text);
   }
   function createElement(tag) {
     var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -1080,10 +1146,10 @@
       children[_key - 2] = arguments[_key];
     }
 
-    return vnode(tag, data, key, children);
+    return vnode$1(tag, data, key, children);
   }
 
-  function vnode(tag, data, key, children, text) {
+  function vnode$1(tag, data, key, children, text) {
     return {
       tag: tag,
       data: data,
@@ -1107,7 +1173,8 @@
 
     Vue.prototype._s = function (val) {
       return val == null ? '' : _typeof(val) === 'object' ? JSON.stringify(val) : val;
-    };
+    }; // 挂载render函数
+
 
     Vue.prototype._render = function () {
       var vm = this;
@@ -1127,13 +1194,40 @@
   }
 
   function Vue(options) {
+    // 执行初始化函数，并把参数传递进去
     this._init(options);
-  }
+  } // 初始化全局api,和全局的koptions
 
-  initGlobalAPI(Vue);
-  initMixin(Vue);
-  lifecycleMixin(Vue);
-  renderMixin(Vue);
+
+  initGlobalAPI(Vue); // 初始化Mixin
+
+  initMixin(Vue); // 初始化生命周期
+
+  lifecycleMixin(Vue); // 初始化渲染方法
+
+  renderMixin(Vue); //-----------分割线 以下是测试代码
+  // 1.创建第一个虚拟节点
+
+  var vm1 = new Vue({
+    data: {
+      name: 'aa'
+    }
+  });
+  var render1 = compileToFunction('<div>{{name}}</div>');
+  var oldVnode = render1.call(vm1); // 2.创建第二个虚拟节点
+
+  var vm2 = new Vue({
+    data: {
+      name: 'bb'
+    }
+  });
+  var render2 = compileToFunction('<p>{{name}}</p>');
+  var newVnode = render2.call(vm2); // 3.通过第一个虚拟节点做首次渲染
+
+  var el = createElm(oldVnode);
+  document.body.appendChild(el); // 4.调用patch方法进行对比操作
+
+  patch(oldVnode, newVnode);
 
   return Vue;
 

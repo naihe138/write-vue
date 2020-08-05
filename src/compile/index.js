@@ -161,7 +161,10 @@ function generate(el) {
   return code;
 }
 
-export function compileToFunctions(template) {
+export function compileToFunction(template) {
+  root = undefined
+  currentParent = undefined
+  stack = []
   // 解析template
   parseHTML(template)
   // 从解析template成ast再生成code
