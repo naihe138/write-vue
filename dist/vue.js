@@ -969,9 +969,15 @@
     var newStartVnode = newChildren[0];
     var newEndIndex = newChildren.length - 1;
     var newEndVnode = newChildren[newEndIndex];
+    var map = makeIndexByKey(oldVnode);
 
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-      if (isSameVnode(oldStartVnode, newStartVnode)) {
+      if (!oldStartVnode) {
+        // 在比对过程中，可能出现空值情况则直接跳过
+        oldStartVnode = oldChildren[++oldStartIndex];
+      } else if (!oldEndVnode) {
+        oldEndVnode = oldChildren[--oldEndIndex];
+      } else if (isSameVnode(oldStartVnode, newStartVnode)) {
         // 优化向后追加逻辑
         patch(oldStartVnode, newStartVnode);
         oldStartVnode = oldChildren[++oldStartIndex];
@@ -981,19 +987,65 @@
         patch(oldEndVnode, newEndVnode);
         oldEndVnode = oldChildren[--oldEndIndex];
         newEndVnode = newChildren[--newEndIndex];
+      } else if (isSameVnode(oldStartVnode, newEndVnode)) {
+        path(oldStartVnode, newEndVnode);
+        parent.insertBefore(oldStartVnode, oldEndVnode.el.nextSibling);
+        oldStartVnode = oldVnode[++oldStartIndex];
+        newEndVnode = newVnode[--newEndIndex];
+      } else if (isSameVnode(oldEndVnode, newStartVnode)) {
+        path(oldEndVnode, newStartVnode);
+        parent.insertBefore(oldEndVnode.el, oldStartVnode.el);
+        oldEndVnode = oldVnode[--oldEndIndex];
+        newStartVnode = newVnode[++newStartIndex];
+      } else {
+        // 暴力对比
+        var moveIndex = map[newStartVnode.key];
+
+        if (moveIndex == undefined) {
+          // 老的中没有将新元素插入
+          parent.insertBefore(createElm(newStartVnode), oldStartVnode.el);
+        } else {
+          // 有的话做移动操作
+          var moveVnode = oldChildren[moveIndex];
+          oldChildren[moveIndex] = undefined;
+          parent.insertBefore(moveVnode.el, oldStartVnode.el);
+          patch(moveVnode, newStartVnode);
+        }
+
+        newStartVnode = newChildren[++newStartIndex];
       }
-    }
+    } // 如果有剩余则直接删除
+
+
+    if (oldStartIndex <= oldEndIndex) {
+      for (var i = oldStartIndex; i <= oldEndIndex; i++) {
+        var child = oldChildren[i];
+
+        if (child != undefined) {
+          parent.removeChild(child.el);
+        }
+      }
+    } // 如果有剩余的直接添加
+
 
     if (newStartIndex <= newEndIndex) {
-      for (var i = newStartIndex; i <= newEndIndex; i++) {
+      for (var _i = newStartIndex; _i <= newEndIndex; _i++) {
         var ele = newChildren[newEndIndex + 1] == null ? null : newChildren[newEndIndex + 1].el;
-        parent.insertBefore(createElm(newChildren[i]), ele);
+        parent.insertBefore(createElm(newChildren[_i]), ele);
       }
     }
   }
 
   function isSameVnode(oldVnode, newVnode) {
     return oldVnode.tag === newVnode.tag && oldVnode.key === newVnode.key;
+  }
+
+  function makeIndexByKey(children) {
+    var map = {};
+    children.forEach(function (item, index) {
+      map[item.key] = index;
+    });
+    return map;
   }
 
   function createElm(vnode) {
@@ -1053,7 +1105,17 @@
   function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
       var vm = this;
-      vm.$el = patch(vm.$el, vnode);
+      var prevVnode = vm._vnode; // 保留上一次的vnode
+
+      vm._vnode = vnode;
+
+      if (!prevVnode) {
+        // 需要用虚拟节点创建出真实节点 替换掉 真实的$el
+        // 我要通过虚拟节点 渲染出真实的dom     
+        vm.$el = patch(vm.$el, vnode);
+      } else {
+        vm.$el = patch(prevVnode, vnode); // 更新时做diff操作
+      }
     };
   } // 挂载组件
 
@@ -1270,7 +1332,7 @@
     }
   });
   var render1 = compileToFunction("\n  <div>\n    <p key=\"A\">A</p>\n    <p key=\"B\">B</p>\n    <p key=\"C\">C</p>\n  </div>");
-  var oldVnode = render1.call(vm1); // 2.创建第二个虚拟节点
+  var oldVnode$1 = render1.call(vm1); // 2.创建第二个虚拟节点
 
   var vm2 = new Vue({
     data: {
@@ -1278,12 +1340,12 @@
     }
   });
   var render2 = compileToFunction("\n  <div>\n    <p key=\"A\">A</p>\n    <p key=\"B\">B</p>\n    <p key=\"C\">C</p>\n    <p key=\"D\">D</p>\n  </div>");
-  var newVnode = render2.call(vm1); // // 3.通过第一个虚拟节点做首次渲染
+  var newVnode$1 = render2.call(vm1); // // 3.通过第一个虚拟节点做首次渲染
 
-  var el = createElm(oldVnode);
+  var el = createElm(oldVnode$1);
   document.body.appendChild(el); // 4.调用patch方法进行对比操作
 
-  patch(oldVnode, newVnode);
+  patch(oldVnode$1, newVnode$1);
 
   return Vue;
 
