@@ -917,8 +917,7 @@
   }
 
   function patch(oldVnode, newVnode) {
-    console.log(oldVnode, newVnode); // 如果是第一次渲染
-
+    // 如果是第一次渲染
     if (!newVnode && oldVnode) {
       var oldElm = oldVnode;
       var parentElm = oldElm.parentNode;
@@ -935,11 +934,68 @@
         oldVnode.el.textContent = newVnode.text;
       }
     } else {
-      var _el = vnode.el = oldVnode.el;
+      var _el = newVnode.el = oldVnode.el;
 
-      updateProperties(newVnode, oldVnode.data);
+      var oldChildren = oldVnode.children || [];
+      var newChildren = newVnode.children || [];
+      var oLen = oldChildren.length;
+      var nLen = newChildren.length;
+      updateProperties(newVnode, oldVnode.data); // 新老都有儿子，则需要对比儿子
+
+      if (oLen > 0 && nLen > 0) {
+        updateChildrens(oldChildren, newChildren, _el);
+      } else if (oLen > 0 && nLen === 0) {
+        // 老的有儿子，新的没有儿子，则直接清空
+        _el.innerHTML = '';
+      } else if (oLen === 0 && nLen > 0) {
+        // 老得没有儿子，新的有儿子
+        var fragment = document.createDocumentFragment();
+
+        for (var i = 0; i < nLen; i++) {
+          fragment.appendChild(createElm(newChildren[i]));
+        }
+
+        _el.appendChild(fragment);
+      }
     }
   }
+
+  function updateChildrens(oldChildren, newChildren, parent) {
+    var oldStartIndex = 0;
+    var oldStartVnode = oldChildren[0];
+    var oldEndIndex = oldChildren.length - 1;
+    var oldEndVnode = oldChildren[oldEndIndex];
+    var newStartIndex = 0;
+    var newStartVnode = newChildren[0];
+    var newEndIndex = newChildren.length - 1;
+    var newEndVnode = newChildren[newEndIndex];
+
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+      if (isSameVnode(oldStartVnode, newStartVnode)) {
+        // 优化向后追加逻辑
+        patch(oldStartVnode, newStartVnode);
+        oldStartVnode = oldChildren[++oldStartIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } else if (isSameVnode(oldEndVnode, newEndVnode)) {
+        // 优化向前追加逻辑
+        patch(oldEndVnode, newEndVnode);
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newEndVnode = newChildren[--newEndIndex];
+      }
+    }
+
+    if (newStartIndex <= newEndIndex) {
+      for (var i = newStartIndex; i <= newEndIndex; i++) {
+        var ele = newChildren[newEndIndex + 1] == null ? null : newChildren[newEndIndex + 1].el;
+        parent.insertBefore(createElm(newChildren[i]), ele);
+      }
+    }
+  }
+
+  function isSameVnode(oldVnode, newVnode) {
+    return oldVnode.tag === newVnode.tag && oldVnode.key === newVnode.key;
+  }
+
   function createElm(vnode) {
     var tag = vnode.tag,
         children = vnode.children,
@@ -1132,7 +1188,7 @@
   }
 
   function createTextNode(text) {
-    return vnode$1(undefined, undefined, undefined, undefined, text);
+    return vnode(undefined, undefined, undefined, undefined, text);
   }
   function createElement(tag) {
     var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -1146,10 +1202,10 @@
       children[_key - 2] = arguments[_key];
     }
 
-    return vnode$1(tag, data, key, children);
+    return vnode(tag, data, key, children);
   }
 
-  function vnode$1(tag, data, key, children, text) {
+  function vnode(tag, data, key, children, text) {
     return {
       tag: tag,
       data: data,
@@ -1213,7 +1269,7 @@
       name: 'aa'
     }
   });
-  var render1 = compileToFunction('<div>{{name}}</div>');
+  var render1 = compileToFunction("\n  <div>\n    <p key=\"A\">A</p>\n    <p key=\"B\">B</p>\n    <p key=\"C\">C</p>\n  </div>");
   var oldVnode = render1.call(vm1); // 2.创建第二个虚拟节点
 
   var vm2 = new Vue({
@@ -1221,8 +1277,8 @@
       name: 'bb'
     }
   });
-  var render2 = compileToFunction('<p>{{name}}</p>');
-  var newVnode = render2.call(vm2); // 3.通过第一个虚拟节点做首次渲染
+  var render2 = compileToFunction("\n  <div>\n    <p key=\"A\">A</p>\n    <p key=\"B\">B</p>\n    <p key=\"C\">C</p>\n    <p key=\"D\">D</p>\n  </div>");
+  var newVnode = render2.call(vm1); // // 3.通过第一个虚拟节点做首次渲染
 
   var el = createElm(oldVnode);
   document.body.appendChild(el); // 4.调用patch方法进行对比操作

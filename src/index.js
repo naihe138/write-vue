@@ -31,7 +31,13 @@ let vm1 = new Vue({
     name: 'aa'
   }
 })
-let render1 = compileToFunction('<div>{{name}}</div>')
+let render1 = compileToFunction(`
+  <div>
+    <p key="A">A</p>
+    <p key="B">B</p>
+    <p key="C">C</p>
+  </div>`
+)
 let oldVnode = render1.call(vm1)
 
 
@@ -41,9 +47,16 @@ let vm2 = new Vue({
     name:'bb'
   }
 });
-let render2 = compileToFunction('<p>{{name}}</p>');
-let newVnode = render2.call(vm2);
-// 3.通过第一个虚拟节点做首次渲染
+let render2 = compileToFunction(`
+  <div>
+    <p key="A">A</p>
+    <p key="B">B</p>
+    <p key="C">C</p>
+    <p key="D">D</p>
+  </div>`
+)
+let newVnode = render2.call(vm1)
+// // 3.通过第一个虚拟节点做首次渲染
 let el = createElm(oldVnode)
 document.body.appendChild(el);
 
