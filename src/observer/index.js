@@ -71,9 +71,10 @@ function dependArray(value) {
 }
 // 数据监听
 export function observe(data) {
-  if (typeof data !== 'object' && data != null) {
+  if (!(data !== null && typeof data === 'object')) {
     return;
   }
+  console.log(data)
   // 如果被监听过就返回监听过的对象
   if (hasOwn(data, '__ob__') && data.__ob__ instanceof Observer) {
     return data.__ob__

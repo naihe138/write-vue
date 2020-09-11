@@ -404,10 +404,11 @@
 
 
   function observe(data) {
-    if (_typeof(data) !== 'object' && data != null) {
+    if (!(data !== null && _typeof(data) === 'object')) {
       return;
-    } // 如果被监听过就返回监听过的对象
+    }
 
+    console.log(data); // 如果被监听过就返回监听过的对象
 
     if (hasOwn(data, '__ob__') && data.__ob__ instanceof Observer) {
       return data.__ob__;
@@ -1313,10 +1314,6 @@
     };
   }
 
-  // import { compileToFunction } from './compile/index'
-  // import { patch, createElm } from './vdom/patch'
-  //-----------分割线 以上是测试代码
-
   function Vue(options) {
     // 执行初始化函数，并把参数传递进去
     this._init(options);
@@ -1329,7 +1326,7 @@
 
   lifecycleMixin(Vue); // 初始化渲染方法
 
-  renderMixin(Vue); //-----------分割线 以下是测试代码
+  renderMixin(Vue);
 
   return Vue;
 
