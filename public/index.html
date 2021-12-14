@@ -8,7 +8,7 @@
 <body>
   <div id="root">
     <div>
-      <p style="color: red;" id="cc">{{name}}</p>
+      <div style="color: red;" id="cc" @click="test">{{name}}</div>
     </div>
   </div>
   <script src="../dist/vue.js"></script>
@@ -28,6 +28,11 @@
       //     return this.name + this.age
       //   }
       // },
+      methods: {
+        test() {
+          console.log(123)
+        }
+      },
       watch: {
         name(oldValue, newValue) {
           console.log(oldValue, newValue)
@@ -35,10 +40,10 @@
       },
       mounted() {
         // console.log('mounted');
-        setTimeout(() => {
-          // console.log('1111');
-          this.name = '567'
-        }, 2000)
+        // setTimeout(() => {
+        //   // console.log('1111');
+        //   this.name = '567'
+        // }, 2000)
       }
     })
   </script>
