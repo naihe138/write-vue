@@ -1,5 +1,9 @@
 
 export function patch(oldVnode, newVnode) {
+  // mount()
+  if (!oldVnode) { // 这就是组件的挂载
+    return createElm(newVnode); // vm.$el  对应的就是组件渲染的结果了
+  }
   // 如果是第一次渲染
   if (oldVnode.nodeType && oldVnode) {
     const oldElm = oldVnode
@@ -8,11 +12,11 @@ export function patch(oldVnode, newVnode) {
     parentElm.insertBefore(el, oldElm.nextSibling)
     parentElm.removeChild(oldVnode)
     return el
-  } else if(oldVnode.tag !== newVnode.tag){  // 如果标签不一致说明是两个不同元素
+  } else if (oldVnode.tag !== newVnode.tag) {  // 如果标签不一致说明是两个不同元素
     oldVnode.el.parentNode.replaceChild(createElm(newVnode), oldVnode.el)
   } else if (!oldVnode.tag) { // 如果标签一致但是不存在则是文本节点
-    if(oldVnode.text !== newVnode.text){
-    	oldVnode.el.textContent = newVnode.text;
+    if (oldVnode.text !== newVnode.text) {
+      oldVnode.el.textContent = newVnode.text;
     }
   } else {
     let el = newVnode.el = oldVnode.el;
@@ -51,10 +55,10 @@ function updateChildrens(oldChildren, newChildren, parent) {
 
   let map = makeIndexByKey(oldChildren)
 
-  while(oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-    if(!oldStartVnode){ // 在比对过程中，可能出现空值情况则直接跳过
+  while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+    if (!oldStartVnode) { // 在比对过程中，可能出现空值情况则直接跳过
       oldStartVnode = oldChildren[++oldStartIndex];
-    }else if(!oldEndVnode){
+    } else if (!oldEndVnode) {
       oldEndVnode = oldChildren[--oldEndIndex]
     } else if (isSameVnode(oldStartVnode, newStartVnode)) { // 优化向后追加逻辑
       patch(oldStartVnode, newStartVnode)
@@ -69,7 +73,7 @@ function updateChildrens(oldChildren, newChildren, parent) {
       parent.insertBefore(oldStartVnode, oldEndVnode.el.nextSibling)
       oldStartVnode = oldVnode[++oldStartIndex]
       newEndVnode = newVnode[--newEndIndex]
-    } else if (isSameVnode(oldEndVnode, newStartVnode)){
+    } else if (isSameVnode(oldEndVnode, newStartVnode)) {
       path(oldEndVnode, newStartVnode)
       parent.insertBefore(oldEndVnode.el, oldStartVnode.el)
       oldEndVnode = oldVnode[--oldEndIndex]
@@ -79,7 +83,7 @@ function updateChildrens(oldChildren, newChildren, parent) {
       if (moveIndex == undefined) { // 老的中没有将新元素插入
         parent.insertBefore(createElm(newStartVnode), oldStartVnode.el);
       } else { // 有的话做移动操作
-        let moveVnode = oldChildren[moveIndex]; 
+        let moveVnode = oldChildren[moveIndex];
         oldChildren[moveIndex] = undefined;
         parent.insertBefore(moveVnode.el, oldStartVnode.el);
         patch(moveVnode, newStartVnode);
@@ -88,10 +92,10 @@ function updateChildrens(oldChildren, newChildren, parent) {
     }
   }
   // 如果有剩余则直接删除
-  if(oldStartIndex <= oldEndIndex){
-    for(let i = oldStartIndex; i<=oldEndIndex;i++){
+  if (oldStartIndex <= oldEndIndex) {
+    for (let i = oldStartIndex; i <= oldEndIndex; i++) {
       let child = oldChildren[i];
-      if(child != undefined){
+      if (child != undefined) {
         parent.removeChild(child.el)
       }
     }
@@ -118,9 +122,23 @@ function makeIndexByKey(children) {
   return map
 }
 
+function createComponent(vnode) {
+  let i = vnode.data;
+  if ((i = i.hook) && (i = i.init)) { // data.hook.init 
+    i(vnode); // 初始化组件 ， 找到init方法
+  }
+  if (vnode.componentInstance) {
+    return true; // 说明是组件
+  }
+}
+
 export function createElm(vnode) {
   let { tag, children, key, data, text } = vnode
-  if(typeof tag === 'string') {
+  if (typeof tag === 'string') {
+    // 创建真实元素 也要区分是组件还是元素
+    if (createComponent(vnode)) { // 组件  vnode.componentInstance.$el
+      return vnode.componentInstance.$el;
+    }
     vnode.el = document.createElement(tag)
     updateProperties(vnode)
     children.forEach(child => {
@@ -132,20 +150,22 @@ export function createElm(vnode) {
   return vnode.el
 }
 
+
+
 function updateProperties(vnode, oldProps = {}) {
   let newProps = vnode.data || {};
   let el = vnode.el;
   // 比对样式
   let newStyle = newProps.style || {};
   let oldStyle = oldProps.style || {};
-  for(let key in oldStyle){
-    if(!newStyle[key]){
+  for (let key in oldStyle) {
+    if (!newStyle[key]) {
       el.style[key] = ''
     }
   }
   // 删除多余属性
-  for(let key in oldProps){
-    if(!newProps[key]){
+  for (let key in oldProps) {
+    if (!newProps[key]) {
       el.removeAttribute(key);
     }
   }

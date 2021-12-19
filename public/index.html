@@ -1,51 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>vue</title>
-</head>
-<body>
-  <div id="root">
-    <div>
-      <div style="color: red;" id="cc" @click="test">{{name}}</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>vue</title>
+  </head>
+  <body>
+    <div id="root">
+      <my-button></my-button>
+      <div style="color: red" id="cc" @click="test">{{name}}</div>
     </div>
-  </div>
-  <script src="../dist/vue.js"></script>
-  <script>
-    
-    var vm = new Vue({
-      el: '#root',
-      data() {
-        return {
-          name: 'abc',
-          age: '123',
-          sex: undefined
-        }
-      },
-      // computed: {
-      //   me() {
-      //     return this.name + this.age
-      //   }
-      // },
-      methods: {
-        test() {
-          console.log(123)
-        }
-      },
-      watch: {
-        name(oldValue, newValue) {
-          console.log(oldValue, newValue)
-        }
-      },
-      mounted() {
-        // console.log('mounted');
-        // setTimeout(() => {
-        //   // console.log('1111');
-        //   this.name = '567'
-        // }, 2000)
-      }
-    })
-  </script>
-</body>
+    <div id="mount-point"></div>
+    <script src="../dist/vue.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script> -->
+    <script>
+      Vue.component("my-button", {
+        // Vue.options.components = {}
+        template: "<button>全局button</button>",
+      });
+
+      var vm = new Vue({
+        el: "#root",
+        data() {
+          return {
+            name: "abc",
+            age: "123",
+            sex: undefined,
+          };
+        },
+        // computed: {
+        //   me() {
+        //     return this.name + this.age
+        //   }
+        // },
+        methods: {
+          test() {
+            console.log(123);
+          },
+        },
+        // watch: {
+        //   name(oldValue, newValue) {
+        //     console.log(oldValue, newValue)
+        //   }
+        // },
+        mounted() {
+          // console.log('mounted');
+          // setTimeout(() => {
+          //   // console.log('1111');
+          //   this.name = '567'
+          // }, 2000)
+        },
+      });
+    </script>
+  </body>
 </html>

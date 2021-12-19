@@ -10,7 +10,7 @@ export function initMixin(Vue) {
   Vue.prototype._init = function (options) {
     const vm = this
     // 合并全局对象到和配置对象到vm.$options中
-    vm.$options = mergeOptions(vm.constructor.options, options)
+    vm.$options = mergeOptions(this.constructor.options, options)
     // 执行berforCreate 生命钩子函数
     callHook(vm, 'berforCreate')
     // 初始化数据

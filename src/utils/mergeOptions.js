@@ -24,10 +24,20 @@ LIFECYCLE_HOOKS.forEach(hook => {
   strate[hook] = mergeHook
 })
 
+strate.components = function (parentValue, childValue) {
+  const res = Object.create(parentValue)
+  if (childValue) {
+    for (let key in childValue) {
+      res[key] = childValue[key]
+    }
+  }
+  return res
+}
+
 export function mergeOptions(parent, child) {
   const options = {}
 
-  for (let key in parent) {
+  for (let key in parent) { // 循环老的 {}
     mergeField(key)
   }
 
@@ -47,7 +57,7 @@ export function mergeOptions(parent, child) {
           ...child[key]
         }
       } else {
-        options[key] = child[key];
+        options[key] = child[key] || parent[key]; // 优先采用儿子，在采用父亲
       }
     }
   }
